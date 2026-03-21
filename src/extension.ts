@@ -1,26 +1,58 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+// fucker
 export function activate(context: vscode.ExtensionContext) {
+    // 1. errors
+    const diagnosticCollection = vscode.languages.createDiagnosticCollection('oi-checker');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "oichecker" is now active!');
+    // 2. checkers
+    if (vscode.window.activeTextEditor) {
+        updateDiagnostics(vscode.window.activeTextEditor.document, diagnosticCollection);
+    }
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('oichecker.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from oichecker!');
-	});
+    // 3. dynamiccheck
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(e => {
+            updateDiagnostics(e.document, diagnosticCollection);
+        })
+    );
 
-	context.subscriptions.push(disposable);
+    // 4. close
+    context.subscriptions.push(
+        vscode.workspace.onDidCloseTextDocument(doc => diagnosticCollection.delete(doc.uri))
+    );
 }
 
-// This method is called when your extension is deactivated
+// checker
+function updateDiagnostics(document: vscode.TextDocument, collection: vscode.DiagnosticCollection): void {
+    if (document.languageId !== 'cpp') return;
+
+    const diagnostics: vscode.Diagnostic[] = [];
+    const text = document.getText();
+
+    //example"a==b instead of a=b
+    const assignRegex = /(if|while)\s*\(\s*[^=!><\s]+\s*=\s*[^=!\s]+\s*\)/g;
+
+    let match;
+    while ((match = assignRegex.exec(text)) !== null) {
+        const range = new vscode.Range(
+            document.positionAt(match.index),
+            document.positionAt(match.index + match[0].length)
+        );
+
+        const diagnostic = new vscode.Diagnostic(
+            range,
+            "if语句中疑似误用=而非==",
+            vscode.DiagnosticSeverity.Warning 
+        );
+        diagnostics.push(diagnostic);
+    }
+
+    //plugins
+
+    // updates
+    collection.set(document.uri, diagnostics);
+}
+
+// exits
 export function deactivate() {}
