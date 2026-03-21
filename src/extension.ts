@@ -1,58 +1,55 @@
 import * as vscode from 'vscode';
+import { simpleRules, globalRules } from './checkers';
 
-// fucker
 export function activate(context: vscode.ExtensionContext) {
-    // 1. errors
     const diagnosticCollection = vscode.languages.createDiagnosticCollection('oi-checker');
 
-    // 2. checkers
+    const updateDiagnostics = (document: vscode.TextDocument) => {
+        if (document.languageId !== 'cpp' && document.languageId !== 'c') return;
+
+        const text = document.getText();
+        const allDiagnostics: vscode.Diagnostic[] = [];
+
+        // 不需要扫描全部代码的规则（局部规则）
+		// 目前的逻辑只能实现警告到 问题所在行与与之最近的大括号之间
+        simpleRules.forEach(rule => {
+            rule.regex.lastIndex = 0; // 重置正则位置，勿动
+            let m;
+            while ((m = rule.regex.exec(text)) !== null) {
+                const braceIndex = m[0].indexOf('{');
+                const rangeLen = (braceIndex !== -1) ? braceIndex : m[0].length;//core
+
+                allDiagnostics.push(new vscode.Diagnostic(
+                    new vscode.Range(
+                        document.positionAt(m.index),
+                        document.positionAt(m.index + rangeLen)
+                    ),
+                    rule.message,
+                    rule.severity
+                ));
+            }
+        });
+
+        // 需要遍历所有代码的规则（全局规则）
+        globalRules.forEach(rule => {
+            allDiagnostics.push(...rule.check(text, document));
+        });
+
+        diagnosticCollection.set(document.uri, allDiagnostics);
+    };
+
+    // 订阅事件
+    context.subscriptions.push(
+        vscode.workspace.onDidOpenTextDocument(updateDiagnostics),
+        vscode.workspace.onDidChangeTextDocument(e => updateDiagnostics(e.document)),
+        vscode.workspace.onDidSaveTextDocument(updateDiagnostics),
+        diagnosticCollection
+    );
+
+    // 启动检查
     if (vscode.window.activeTextEditor) {
-        updateDiagnostics(vscode.window.activeTextEditor.document, diagnosticCollection);
+        updateDiagnostics(vscode.window.activeTextEditor.document);
     }
-
-    // 3. dynamiccheck
-    context.subscriptions.push(
-        vscode.workspace.onDidChangeTextDocument(e => {
-            updateDiagnostics(e.document, diagnosticCollection);
-        })
-    );
-
-    // 4. close
-    context.subscriptions.push(
-        vscode.workspace.onDidCloseTextDocument(doc => diagnosticCollection.delete(doc.uri))
-    );
 }
 
-// checker
-function updateDiagnostics(document: vscode.TextDocument, collection: vscode.DiagnosticCollection): void {
-    if (document.languageId !== 'cpp') return;
-
-    const diagnostics: vscode.Diagnostic[] = [];
-    const text = document.getText();
-
-    //example"a==b instead of a=b"
-    const assignRegex = /(if|while)\s*\(\s*[^=!><\s]+\s*=\s*[^=!\s]+\s*\)/g;
-
-    let match;
-    while ((match = assignRegex.exec(text)) !== null) {
-        const range = new vscode.Range(
-            document.positionAt(match.index),
-            document.positionAt(match.index + match[0].length)
-        );
-
-        const diagnostic = new vscode.Diagnostic(
-            range,
-            "if语句中疑似误用=而非==",
-            vscode.DiagnosticSeverity.Warning 
-        );
-        diagnostics.push(diagnostic);
-    }
-
-    //plugins
-
-    // updates
-    collection.set(document.uri, diagnostics);
-}
-
-// exits
 export function deactivate() {}
