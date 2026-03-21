@@ -30,7 +30,7 @@ function updateDiagnostics(document: vscode.TextDocument, collection: vscode.Dia
     const diagnostics: vscode.Diagnostic[] = [];
     const text = document.getText();
 
-    //example"a==b instead of a=b
+    //example"a==b instead of a=b"
     const assignRegex = /(if|while)\s*\(\s*[^=!><\s]+\s*=\s*[^=!\s]+\s*\)/g;
 
     let match;
