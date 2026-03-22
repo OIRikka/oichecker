@@ -2,6 +2,8 @@
 using namespace std;
 int main()
 {
+    //freopen("a.in","r",stdin);
+    freopen("b,out","w",stdout);
     int a,b;
     if(a=b)
     {
@@ -11,7 +13,7 @@ int main()
     cin>>T;
     while(T--)
     {
-        memset
+
         cout<<114514;
     }
     return 0;
