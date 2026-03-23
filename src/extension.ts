@@ -1,9 +1,18 @@
 import * as vscode from 'vscode';
 import { simpleRules, globalRules } from './checkers';
-
+import { filterIgnoredDiagnostics, shouldIgnore } from './ignore';
+import { OiIgnoreFixer } from './fixer';
 export function activate(context: vscode.ExtensionContext) {
     const diagnosticCollection = vscode.languages.createDiagnosticCollection('oi-checker');
-
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file', language: 'cpp' },
+            new OiIgnoreFixer(), 
+            {
+                providedCodeActionKinds: OiIgnoreFixer.providedCodeActionKinds
+            }
+        )
+    );
     const updateDiagnostics = (document: vscode.TextDocument) => {
         if (document.languageId !== 'cpp' && document.languageId !== 'c') return;
 

@@ -98,7 +98,6 @@ export const globalRules: GlobalRule[] = [
                 } else if (!isCommented && content.trim().length > 0) {
                     diagnostics.push(new vscode.Diagnostic(range, "freopen 必须包含 3 个参数", vscode.DiagnosticSeverity.Error));
                 }
-
                 if (isCommented && diagnostics.filter(d => d.range.isEqual(range)).length === 0) {
                     diagnostics.push(new vscode.Diagnostic(range, "freopen 已被注释，提交前记得开启", vscode.DiagnosticSeverity.Information));
                 }
